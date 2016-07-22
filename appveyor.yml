@@ -25,14 +25,9 @@ environment:
   SEC_KEY_FILE_GPG: $(USERPROFILE)\log4jnasecret.gpg.asc
   SECURE_FILE_DIR: C:\secure-file
   SECURE_FILE_CMD: C:\secure-file\tools\secure-file.exe
-  SECURE_FILE_DEC: '-decrypt'
-  SECURE_FILE_SEC: '-secret'
 
   secret:
-    secure: Z851+sNOAoEP/lr/3hGjRjC+SlaO19wPqPAYGZFEgfY=
-
-  #secret:
-  #  secure: 2jB/P5OINYqlYP3vH2SkPolt/GG6eP8WpL2XOXszfwY=
+    secure: 2jB/P5OINYqlYP3vH2SkPolt/GG6eP8WpL2XOXszfwY=
 
 install:
 
@@ -59,34 +54,32 @@ install:
       }
 
       # Test if .m2 exists and create or update maven settings
-      $CMD = "C:\secure-file\tools\secure-file.exe"
-      $decrip = '-decrypt'
-      $secret = '-secret'
       if(!(Test-Path -Path $env:M2)) {
           New-Item $env:M2 -type directory -Verbose
           # Install maven settings
           Copy-Item $env:SETTINGS_ENC $env:M2_SETTINGS_ENC -Verbose
           Copy-Item $env:SETTINGS_SEC_ENC $env:M2_SETTINGS_SEC_ENC -Verbose
-          & $env:SECURE_FILE_CMD $env:SECURE_FILE_DEC $env:M2_SETTINGS_ENC $env:SECURE_FILE_SEC $env:secret
-          & $env:SECURE_FILE_CMD $env:SECURE_FILE_DEC $env:M2_SETTINGS_SEC_ENC $env:SECURE_FILE_SEC $env:secret
+          & $env:SECURE_FILE_CMD -decrypt $env:M2_SETTINGS_ENC -secret %secret%
+          & $env:SECURE_FILE_CMD -decrypt $env:M2_SETTINGS_SEC_ENC -secret %secret%
       } else {
-      # The directory exists test Meven settings
-        if (!(Test-Path $env:M2_SETTINGS_ENC) -or ((Get-FileHash $env:M2_SETTINGS_ENC).hash -ne (Get-FileHash $env:SETTINGS_ENC).hash)) {
-          Copy-Item $env:SETTINGS_ENC $env:M2_SETTINGS_ENC -Verbose
-          & $env:SECURE_FILE_CMD $env:SECURE_FILE_DEC $env:M2_SETTINGS_ENC $env:SECURE_FILE_SEC $env:secret
-        } else {
-          Write-Host "$env:M2_SETTINGS_ENC up to date"
-        }
+          $ The directory exists test Maven settings
+          if (!(Test-Path $env:M2_SETTINGS_ENC) -or ((Get-FileHash $env:M2_SETTINGS_ENC).hash -ne (Get-FileHash $env:SETTINGS_ENC).hash)) {
+            Copy-Item $env:SETTINGS_ENC $env:M2_SETTINGS_ENC -Verbose
+            & $env:SECURE_FILE_CMD -decrypt $env:M2_SETTINGS_ENC -secret %secret%
+          } else {
+            Write-Host "$env:M2_SETTINGS_ENC up to date"
+          }
 
-        if (!(Test-Path $env:M2_SETTINGS_SEC_ENC) -or ((Get-FileHash $env:M2_SETTINGS_SEC_ENC).hash -ne (Get-FileHash $env:SETTINGS_SEC_ENC).hash)) {
-          Copy-Item $env:SETTINGS_SEC_ENC $env:M2_SETTINGS_SEC_ENC -Verbose
-          & $env:SECURE_FILE_CMD $env:SECURE_FILE_DEC $env:M2_SETTINGS_SEC_ENC $env:SECURE_FILE_SEC $env:secret
-        } else {
-          Write-Host "$env:M2_SETTINGS_SEC up to date"
-        }
+          if (!(Test-Path $env:M2_SETTINGS_SEC_ENC) -or ((Get-FileHash $env:M2_SETTINGS_SEC_ENC).hash -ne (Get-FileHash $env:SETTINGS_SEC_ENC).hash)) {
+            Copy-Item $env:SETTINGS_SEC $env:M2_SETTINGS_SEC -Verbose
+            & $env:SECURE_FILE_CMD -decrypt $env:M2_SETTINGS_SEC_ENC -secret %secret%
+          } else {
+            Write-Host "$env:M2_SETTINGS_SEC up to date"
+          }
       }
 
   # Decrypt and install gpg keys
+  - echo Decrypting and installing GPG keys ...
   - C:\secure-file\tools\secure-file -decrypt %PUB_KEY_FILE_ENC% -secret %secret% -out %PUB_KEY_FILE_GPG%
   - C:\secure-file\tools\secure-file -decrypt %SEC_KEY_FILE_ENC% -secret %secret% -out %SEC_KEY_FILE_GPG%
   - gpg --import %PUB_KEY_FILE_GPG%
